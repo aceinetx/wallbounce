@@ -6,22 +6,58 @@ using namespace wb;
 Wallbounce::Wallbounce() {
 	InitWindow(screenWidth, screenHeight, "wallbounce");
 	SetTargetFPS(60);
-
-	playerPos.x = screenWidth / 2.0;
-	playerPos.y = screenHeight / 2.0;
-
-	playerVel.x = 200.0f;
-
-	std::memset(wallLeftObjs, 0, sizeof(wallLeftObjs));
-	std::memset(wallRightObjs, 0, sizeof(wallRightObjs));
-
-	wallLeftObjs[0] = WallObjType::SPIKE;
-	wallLeftObjs[1] = WallObjType::SPIKE;
-	wallLeftObjs[2] = WallObjType::SPIKE;
 }
 
 Wallbounce::~Wallbounce() {
 	CloseWindow();
+}
+
+void Wallbounce::ClearObjects(float xFilter) {
+	std::vector<size_t> indexes;
+	for (size_t i = 0; i < objects.size(); i++) {
+		if (xFilter != 0 && objects[i].rect.x == xFilter)
+			indexes.insert(indexes.begin(), i);
+	}
+
+	for (size_t index : indexes) {
+		objects.erase(objects.begin() + index);
+	}
+	return;
+}
+
+void Wallbounce::GenerateLava(unsigned char wall) {
+	if (wall == 0)
+		ClearObjects(20);
+	else if (wall == 1) {
+		ClearObjects(screenWidth - 30);
+	}
+
+	size_t tiles = screenHeight / 50;
+
+	std::vector<size_t> skip;
+	skip.push_back(rand() % tiles);
+	skip.push_back(skip.back() + 1);
+	skip.push_back(skip.back() - 2);
+
+	for (size_t i = 0; i < tiles; i++) {
+		if (std::find(skip.begin(), skip.end(), i) != skip.end())
+			continue;
+
+		GameObject obj;
+		obj.type = GameObject::LAVA;
+		obj.rect.y = 50.0f * i;
+		obj.rect.height = 50;
+
+		if (wall == 0) {
+			obj.rect.x = 20;
+			obj.rect.width = 10;
+		} else if (wall == 1) {
+			obj.rect.x = screenWidth - 30;
+			obj.rect.width = 10;
+		}
+
+		objects.push_back(obj);
+	}
 }
 
 void Wallbounce::PausedStateFrame() {
@@ -34,10 +70,20 @@ void Wallbounce::PausedStateFrame() {
 	snprintf(score_text, sizeof(score_text), "High score: %d", high_score);
 	DrawText(score_text, 0, 0, 25, LIGHTGRAY);
 
-	if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+	if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE)) {
 		gameState = GameState::PLAYING;
-	} else if (IsKeyDown(KEY_SPACE)) {
-		gameState = GameState::PLAYING;
+
+		objects.clear();
+		score = 0;
+
+		playerPos.x = screenWidth / 2.0;
+		playerPos.y = screenHeight / 2.0;
+
+		playerVel.x = 200.0f;
+		playerVel.y = 0.0f;
+
+		GenerateLava(0);
+		GenerateLava(1);
 	}
 }
 
@@ -65,26 +111,34 @@ void Wallbounce::PlayingStateFrame() {
 		score++;
 		if (score > high_score)
 			high_score = score;
+		if (playerVel.x < 0)
+			GenerateLava(0);
+		else {
+			GenerateLava(1);
+		}
 	}
-	snprintf(score_text, sizeof(score_text), "%d", high_score);
+	snprintf(score_text, sizeof(score_text), "%d", score);
 
 	ClearBackground(RAYWHITE);
-	DrawText(score_text, 25, 0, 50, LIGHTGRAY);
 
 	DrawRectangleRec(wallLeft, GRAY);
 	DrawRectangleRec(wallRight, GRAY);
 
-	// draw wall objects
-	for (WallObjType obj : wallLeftObjs) {
-		switch (obj) {
-		case WallObjType::SPIKE: {
+	for (GameObject obj : objects) {
+		switch (obj.type) {
+		case GameObject::LAVA: {
+			DrawRectangleRec(obj.rect, RED);
+			if (CheckCollisionRecs(obj.rect, playerRect)) {
+				gameState = GameState::PAUSE;
+				return;
+			}
 		} break;
-		default:
-			break;
 		}
 	}
 
 	DrawRectangleRec(playerRect, LIGHTGRAY);
+
+	DrawText(score_text, 25, 0, 50, LIGHTGRAY);
 
 	if (IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
 		playerVel.y = -500.0f;

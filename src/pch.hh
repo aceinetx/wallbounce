@@ -4,5 +4,6 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <random>
 #include <raylib.h>

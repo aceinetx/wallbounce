@@ -1,43 +1,61 @@
 #include "wallbounce.hh"
-#include <raylib.h>
 
 using namespace wb;
 
 Wallbounce::Wallbounce() {
 	InitWindow(screenWidth, screenHeight, "wallbounce");
 	SetTargetFPS(60);
+
+	randSeed = 1007;
 }
 
 Wallbounce::~Wallbounce() {
 	CloseWindow();
 }
 
-void Wallbounce::ClearObjects(float xFilter) {
-	std::vector<size_t> indexes;
-	for (size_t i = 0; i < objects.size(); i++) {
-		if (xFilter != 0 && objects[i].rect.x == xFilter)
-			indexes.insert(indexes.begin(), i);
-	}
-
-	for (size_t index : indexes) {
-		objects.erase(objects.begin() + index);
-	}
+void Wallbounce::ClearObjects(unsigned char wall) {
+	if (wall == 0)
+		leftWallObjects.clear();
+	if (wall == 1)
+		rightWallObjects.clear();
 	return;
 }
 
 void Wallbounce::GenerateLava(unsigned char wall) {
 	if (wall == 0)
-		ClearObjects(20);
+		ClearObjects(wall);
 	else if (wall == 1) {
-		ClearObjects(screenWidth - 30);
+		ClearObjects(wall);
 	}
 
 	size_t tiles = screenHeight / 50;
 
 	std::vector<size_t> skip;
-	skip.push_back(rand() % tiles);
+	skip.push_back(Rand() % tiles);
 	skip.push_back(skip.back() + 1);
 	skip.push_back(skip.back() - 2);
+
+	int shieldPos = -1;
+	if ((Rand() % 10) == 5) {
+		shieldPos = Rand() % tiles;
+		skip.push_back(shieldPos);
+		skip.push_back(shieldPos + 1);
+
+		GameObject obj;
+		obj.type = GameObject::SHIELD;
+		obj.rect.y = 50.0f * shieldPos + 25.0f;
+		obj.rect.height = 50;
+
+		if (wall == 0) {
+			obj.rect.x = 20;
+			obj.rect.width = 10;
+			leftWallObjects.push_back(obj);
+		} else if (wall == 1) {
+			obj.rect.x = screenWidth - 30;
+			obj.rect.width = 10;
+			rightWallObjects.push_back(obj);
+		}
+	}
 
 	for (size_t i = 0; i < tiles; i++) {
 		if (std::find(skip.begin(), skip.end(), i) != skip.end())
@@ -51,13 +69,22 @@ void Wallbounce::GenerateLava(unsigned char wall) {
 		if (wall == 0) {
 			obj.rect.x = 20;
 			obj.rect.width = 10;
+			leftWallObjects.push_back(obj);
 		} else if (wall == 1) {
 			obj.rect.x = screenWidth - 30;
 			obj.rect.width = 10;
+			rightWallObjects.push_back(obj);
 		}
-
-		objects.push_back(obj);
 	}
+}
+
+void Wallbounce::RandSeed(uint64_t seed) {
+	randSeed = seed;
+	std::srand(seed);
+}
+
+uint64_t Wallbounce::Rand() {
+	return std::rand();
 }
 
 void Wallbounce::PausedStateFrame() {
@@ -73,31 +100,39 @@ void Wallbounce::PausedStateFrame() {
 	if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE)) {
 		gameState = GameState::PLAYING;
 
-		objects.clear();
+		leftWallObjects.clear();
+		rightWallObjects.clear();
+
 		score = 0;
 
 		playerPos.x = screenWidth / 2.0;
 		playerPos.y = screenHeight / 2.0;
 
-		playerVel.x = 200.0f;
-		playerVel.y = 0.0f;
+		playerDirX = 1;
+		playerVelY = 0.0f;
 
 		GenerateLava(0);
 		GenerateLava(1);
+
+		shields = 0;
+		shieldCollided = false;
 	}
 }
 
 void Wallbounce::PlayingStateFrame() {
 	char score_text[64];
 
-	playerVel.y += 25.0f;
+	playerVelY += gravity * delta;
 
-	playerPos.y += playerVel.y * delta;
-	playerPos.x += playerVel.x * delta;
+	playerPos.y += playerVelY;
+	if (playerDirX == 1)
+		playerPos.x += horizontalSpeed * delta;
+	else
+		playerPos.x += -horizontalSpeed * delta;
 
 	if (playerPos.y < 0) {
 		playerPos.y = 0;
-		playerVel.y = 25.0f;
+		playerVelY = gravity * delta;
 	}
 
 	if (playerPos.y > (float)screenHeight) {
@@ -107,11 +142,11 @@ void Wallbounce::PlayingStateFrame() {
 	playerRect = {.x = playerPos.x, .y = playerPos.y, .width = 50, .height = 50};
 
 	if (CheckCollisionRecs(playerRect, wallLeft) || CheckCollisionRecs(playerRect, wallRight)) {
-		playerVel.x = -playerVel.x;
+		playerDirX = -playerDirX;
 		score++;
 		if (score > high_score)
 			high_score = score;
-		if (playerVel.x < 0)
+		if (playerDirX == -1)
 			GenerateLava(0);
 		else {
 			GenerateLava(1);
@@ -121,27 +156,61 @@ void Wallbounce::PlayingStateFrame() {
 
 	ClearBackground(RAYWHITE);
 
-	DrawRectangleRec(wallLeft, GRAY);
-	DrawRectangleRec(wallRight, GRAY);
+	bool didCollide = false;
+	{
+		auto for_func = [&didCollide, this](GameObject& obj) -> bool {
+			if (obj.decayed)
+				return true;
 
-	for (GameObject obj : objects) {
-		switch (obj.type) {
-		case GameObject::LAVA: {
-			DrawRectangleRec(obj.rect, RED);
-			if (CheckCollisionRecs(obj.rect, playerRect)) {
-				gameState = GameState::PAUSE;
-				return;
+			switch (obj.type) {
+			case GameObject::LAVA: {
+				DrawRectangleRec(obj.rect, RED);
+				if (CheckCollisionRecs(obj.rect, playerRect)) {
+					didCollide = true;
+					if (!shields) {
+						gameState = GameState::STOP;
+					} else {
+						shieldCollided = true;
+					}
+				}
+			} break;
+			case GameObject::SHIELD: {
+				DrawRectangleRec(obj.rect, BLUE);
+				if (CheckCollisionRecs(obj.rect, playerRect)) {
+					shields++;
+					obj.decayed = true;
+				}
+			} break;
 			}
-		} break;
+			return true;
+		};
+
+		for (GameObject& obj : rightWallObjects) {
+			if (!for_func(obj))
+				break;
+		}
+		for (GameObject& obj : leftWallObjects) {
+			if (!for_func(obj))
+				break;
 		}
 	}
 
-	DrawRectangleRec(playerRect, LIGHTGRAY);
+	if (!didCollide && shieldCollided) {
+		shields--;
+		shieldCollided = false;
+	}
 
-	DrawText(score_text, 25, 0, 50, LIGHTGRAY);
+	DrawRectangleRec(wallLeft, GRAY);
+	DrawRectangleRec(wallRight, GRAY);
+
+	DrawRectangleRec(playerRect, LIGHTGRAY);
+	if (shields)
+		DrawRectangleLinesEx(playerRect, 3.0f, BLUE);
+
+	DrawText(score_text, 35, 0, 50, LIGHTGRAY);
 
 	if (IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-		playerVel.y = -500.0f;
+		playerVelY = jumpVelocity * delta;
 	}
 }
 
@@ -157,7 +226,7 @@ void Wallbounce::Run() {
 		BeginDrawing();
 
 		switch (gameState) {
-		case GameState::PAUSE:
+		case GameState::STOP:
 			PausedStateFrame();
 			break;
 		case GameState::PLAYING:

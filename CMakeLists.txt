@@ -11,8 +11,10 @@ find_package(raylib CONFIG REQUIRED)
 
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cc")
 
-add_compile_options(-DPLATFORM_WEB)
-add_link_options(-sUSE_GLFW=3 -sASYNCIFY)
+if(EMSCRIPTEN)
+	add_compile_options(-DPLATFORM_WEB)
+	add_link_options(-sUSE_GLFW=3 -sASYNCIFY -sASSERTIONS=1 -sWASM=1 --preload-file=../assets -sFORCE_FILESYSTEM)
+endif()
 
 add_executable(wallbounce ${SOURCES})
 target_link_libraries(wallbounce raylib m)

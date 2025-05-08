@@ -3,7 +3,10 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <ctime>
+#include <filesystem>
 #include <functional>
 #include <random>
 #include <raylib.h>

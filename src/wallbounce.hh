@@ -20,9 +20,11 @@ public:
 private:
 	void PausedStateFrame();
 	void PlayingStateFrame();
-	void UpdateScoreText();
+
+	void UpdatePhysics();
 
 	float delta;
+	float accumulator = 0.0f;
 
 	Rectangle playerRect;
 
@@ -32,6 +34,8 @@ private:
 	uint64_t randSeed;
 
 	bool shieldCollided = false;
+
+	Texture2D shieldTexture;
 
 public:
 	GameState gameState;
@@ -61,7 +65,7 @@ public:
 	void Run();
 
 	void ClearObjects(unsigned char wall = 0);
-	void GenerateLava(unsigned char wall = 0);
+	void Generate(unsigned char wall = 0);
 
 	void RandSeed(uint64_t seed);
 	uint64_t Rand();

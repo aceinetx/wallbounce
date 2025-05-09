@@ -3,18 +3,16 @@
 using namespace wb;
 
 void Wallbounce::PausedStateFrame() {
-	char score_text[64];
-
 	ClearBackground(RAYWHITE);
 
 	DrawText("Click to start", screenWidth / 2.8f, screenHeight / 2, 20, LIGHTGRAY);
 
-	snprintf(score_text, sizeof(score_text), "High score: %d", high_score);
-	DrawText(score_text, 0, 0, 25, LIGHTGRAY);
+	DrawText(TextFormat("High score: %d", high_score), 0, 0, 25, LIGHTGRAY);
 
 	if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsKeyPressed(KEY_SPACE)) {
 		gameState = GameState::PLAYING;
 
+		// Reset state
 		leftWallObjects.clear();
 		rightWallObjects.clear();
 

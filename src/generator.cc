@@ -12,13 +12,18 @@ void Wallbounce::Generate(unsigned char wall) {
 	size_t tiles = screenHeight / 50;
 
 	std::vector<size_t> skip;
-	skip.push_back(Rand() % tiles);
-	skip.push_back(skip.back() + 1);
-	skip.push_back(skip.back() - 2);
+	// Generate an empty space
+	{
+		size_t y = Rand() % (tiles - 2);
+		skip.push_back(y);
+		skip.push_back(y + 1);
+		skip.push_back(y - 1);
+	}
 
+	// Generate a shield
 	int shieldPos = -1;
-	if ((Rand() % 15) == 1) {
-		shieldPos = Rand() % tiles;
+	if ((Rand() % 10) == 1) {
+		shieldPos = Rand() % (tiles - 2);
 		for (;;) {
 			bool invalid = false;
 			for (size_t i : skip) {
@@ -29,7 +34,7 @@ void Wallbounce::Generate(unsigned char wall) {
 			}
 			if (!invalid)
 				break;
-			shieldPos = Rand() % tiles;
+			shieldPos = Rand() % (tiles - 2);
 		}
 		skip.push_back(shieldPos);
 		skip.push_back(shieldPos + 1);
@@ -50,6 +55,7 @@ void Wallbounce::Generate(unsigned char wall) {
 		}
 	}
 
+	// Generate lava
 	for (size_t i = 0; i < tiles; i++) {
 		if (std::find(skip.begin(), skip.end(), i) != skip.end())
 			continue;

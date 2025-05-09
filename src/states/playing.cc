@@ -71,6 +71,7 @@ void Wallbounce::PlayingStateFrame() {
 	}
 
 	if (IsKeyPressed(KEY_SPACE) || IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+		// Jump
 		playerVelY = jumpVelocity * fixedTimestep;
 	}
 }

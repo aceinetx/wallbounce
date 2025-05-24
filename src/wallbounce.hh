@@ -4,7 +4,7 @@
 namespace wb {
 class Wallbounce {
 public:
-	typedef enum class GameState { STOP, PLAYING } GameState;
+	typedef enum class GameState { MAIN, STOP, PLAYING } GameState;
 
 	typedef struct GameObject {
 		union {
@@ -18,10 +18,14 @@ public:
 	} GameObject;
 
 private:
+	void MainStateFrame();
 	void PausedStateFrame();
 	void PlayingStateFrame();
+	void TextInputFrame();
 
 	void UpdatePhysics();
+
+	void FocusInput();
 
 	float delta;
 	float accumulator = 0.0f;
@@ -36,6 +40,13 @@ private:
 	bool shieldCollided = false;
 
 	Texture2D shieldTexture;
+
+	std::random_device dev;
+	std::mt19937 rng;
+	std::uniform_int_distribution<std::mt19937::result_type> dist_wall;
+
+	std::string textInput;
+	bool textInputFocused;
 
 public:
 	GameState gameState;

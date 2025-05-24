@@ -14,7 +14,8 @@ void Wallbounce::Generate(unsigned char wall) {
 	std::vector<size_t> skip;
 	// Generate an empty space
 	{
-		size_t y = Rand() % (tiles - 2);
+		// size_t y = Rand() % (tiles - 2);
+		size_t y = dist_wall(rng);
 		skip.push_back(y);
 		skip.push_back(y + 1);
 		skip.push_back(y - 1);
@@ -23,7 +24,8 @@ void Wallbounce::Generate(unsigned char wall) {
 	// Generate a shield
 	int shieldPos = -1;
 	if ((Rand() % 10) == 1) {
-		shieldPos = Rand() % (tiles - 2);
+		// shieldPos = Rand() % (tiles - 2);
+		shieldPos = dist_wall(rng);
 		for (;;) {
 			bool invalid = false;
 			for (size_t i : skip) {
@@ -34,7 +36,7 @@ void Wallbounce::Generate(unsigned char wall) {
 			}
 			if (!invalid)
 				break;
-			shieldPos = Rand() % (tiles - 2);
+			shieldPos = dist_wall(rng);
 		}
 		skip.push_back(shieldPos);
 		skip.push_back(shieldPos + 1);

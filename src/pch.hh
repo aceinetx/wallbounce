@@ -8,5 +8,7 @@
 #include <ctime>
 #include <filesystem>
 #include <functional>
+#include <imgui.h>
 #include <random>
 #include <raylib.h>
+#include <rlImGui.h>

@@ -1,6 +1,6 @@
 [submodule "imgui"]
-	path = imgui
+	path = legacy/imgui
 	url = https://github.com/ocornut/imgui
 [submodule "rlImGui"]
-	path = rlImGui
+	path = legacy/rlImGui
 	url = https://github.com/raylib-extras/rlImGui

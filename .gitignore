@@ -1,3 +1,4 @@
+.zig-cache
 .cache
-.vs
-build
+zig-out
+zig-pkg

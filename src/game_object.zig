@@ -6,9 +6,10 @@ pub const GameObjectType = enum {
 };
 
 pub const GameObject = struct {
-    rect: rl.Rectangle,
     type: GameObjectType,
+    rect: rl.Rectangle,
     decayed: bool,
+    has_collision: bool,
 
     pub fn init() @This() {
         return .{
